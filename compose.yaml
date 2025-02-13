@@ -1,0 +1,100 @@
+# Linux Admin Dashboard Project
+
+## 1. Dockerized Setup
+# Use Docker to containerize the LAMP stack and monitoring tools
+
+### Docker Compose File (docker-compose.yml)
+```yaml
+version: '3.8'
+services:
+  web:
+    image: php:apache
+    container_name: apache_server
+    volumes:
+      - ./web:/var/www/html
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: admin_dashboard
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: adminpassword
+    volumes:
+      - db_data:/var/lib/mysql
+
+  monitoring:
+    build: ./monitoring
+    container_name: monitoring_service
+    depends_on:
+      - web
+      - db
+
+volumes:
+  db_data:
+```
+
+## 2. Python Monitoring Script (monitor.py)
+# A simple Python script to check CPU & memory usage
+
+```python
+import psutil
+
+def check_system():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    mem_info = psutil.virtual_memory()
+    
+    print(f"CPU Usage: {cpu_usage}%")
+    print(f"Memory Usage: {mem_info.percent}%")
+    
+    if cpu_usage > 80 or mem_info.percent > 80:
+        print("Warning: High system usage detected!")
+
+if __name__ == "__main__":
+    check_system()
+```
+
+### Dockerfile for Monitoring Service (monitoring/Dockerfile)
+```Dockerfile
+FROM python:3.8
+WORKDIR /app
+COPY monitor.py .
+RUN pip install psutil
+CMD ["python", "monitor.py"]
+```
+
+## 3. Basic PHP Dashboard (web/index.php)
+# Displays system information using shell commands
+
+```php
+<?php
+    $cpu = shell_exec("top -bn1 | grep 'Cpu' | awk '{print $2}'");
+    $mem = shell_exec("free -m | awk 'NR==2{printf \"%s/%sMB (%.2f%%)\", $3,$2,$3*100/$2 }'");
+?>
+<html>
+<head><title>Linux Admin Dashboard</title></head>
+<body>
+    <h1>Server Monitoring Dashboard</h1>
+    <p>CPU Usage: <?php echo $cpu; ?>%</p>
+    <p>Memory Usage: <?php echo $mem; ?></p>
+</body>
+</html>
+```
+
+## 4. Instructions
+# To set up this project:
+# 1. Clone repo: `git clone https://github.com/yourusername/linux-admin-dashboard.git`
+# 2. Navigate to project: `cd linux-admin-dashboard`
+# 3. Start services: `docker-compose up -d`
+# 4. Access the dashboard at `http://localhost:8080/`
+
+## 5. Next Steps
+# - Add email/SMS alerts
+# - Extend dashboard with real-time graphs (Grafana)
+# - Automate KVM management
